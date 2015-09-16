@@ -1,11 +1,11 @@
 package com.inivaran.messagesigning;
 
 public class XBarSignature {
-    private final String signatureValue;
-    private final String signatureMetadata;
+    public final String value;
+    public final String metadata;
 
-    public XBarSignature(String signatureValue, String signatureMetadata) {
-        this.signatureValue = signatureValue;
-        this.signatureMetadata = signatureMetadata;
+    public XBarSignature(String value, String metadata) {
+        this.value = value;
+        this.metadata = metadata;
     }
 }

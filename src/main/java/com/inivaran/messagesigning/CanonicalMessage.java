@@ -67,7 +67,7 @@ public class CanonicalMessage {
 
          headers.entrySet().stream().forEach(entry ->
                  newMap.put(entry.getKey().toUpperCase(),
-                            entry.getValue().toUpperCase()));
+                            entry.getValue()));
         return newMap;
     }
 

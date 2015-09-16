@@ -17,15 +17,15 @@ public class RESTMessageSigning {
             throws MessageSigningException {
 
         String signatureMetadata = buildSignatureMetadata(detail.clientId,
-                detail.path,
+                detail.requestPath,
                 detail.requestId,
                 detail.requestTimestamp);
 
         Map<String, String> headers = addMetadataHeader(detail, signatureMetadata);
 
-        String canonicalRequest = buildCanonicalRequest(detail.method,
-                detail.path,
-                detail.body,
+        String canonicalRequest = buildCanonicalRequest(detail.requestMethod,
+                detail.requestPath,
+                detail.requestBody,
                 headers);
 
         MessageSigning rsaMessageSigning = new MessageSigning();
@@ -42,7 +42,7 @@ public class RESTMessageSigning {
 
     private Map<String, String> addMetadataHeader(SignRequestDetail signRequestDetails, String metadata) {
         Map<String, String> headerBuilder = new HashMap<>();
-        for (Map.Entry<String, String> entry : signRequestDetails.headers.entrySet()) {
+        for (Map.Entry<String, String> entry : signRequestDetails.requestHeaders.entrySet()) {
             headerBuilder.put(entry.getKey(), entry.getValue());
         }
         headerBuilder.put("X-BAR-SIGNATURE-METADATA", metadata);
@@ -83,7 +83,7 @@ public class RESTMessageSigning {
 
         headers.entrySet().stream().forEach(entry ->
                 newMap.put(entry.getKey().toUpperCase(),
-                        entry.getValue().toUpperCase()));
+                        entry.getValue()));
         return newMap;
     }
 }
