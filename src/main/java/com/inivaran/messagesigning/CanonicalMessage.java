@@ -11,10 +11,11 @@ public class CanonicalMessage {
                                                String body,
                                                Map<String, String> headers) {
 
-        return buildCanonicalMethod(method) + "\n" +
-                buildCanonicalPath(path) + "\n" +
-                buildCanonicalHeaders(headers) + "\n" +
-                buildCanonicalPayload(body);
+        return String.join("\n",
+                method.toUpperCase(),
+                buildCanonicalPath(path),
+                buildCanonicalHeaders(headers),
+                buildCanonicalBody(body));
     }
 
     public static String buildSignatureMetadata(String clientId, String destination,
@@ -31,19 +32,13 @@ public class CanonicalMessage {
         signatureMetadata.put("request-id", requestId.toString());
         signatureMetadata.put("request-timestamp", requestTimestamp.toString());
 
-        List<String> list = new ArrayList<>();
-
-        for (Map.Entry<String, String> entry : signatureMetadata.entrySet()) {
-            list.add(String.format("%s=\"%s\"", entry.getKey(), entry.getValue()));
-        }
-        return list.stream().collect(Collectors.joining(";"));
+        return signatureMetadata.entrySet()
+                .stream()
+                .map(entry -> String.format("%s=\"%s\"", entry.getKey(), entry.getValue()))
+                .collect(Collectors.joining(";"));
     }
 
-    public static String buildCanonicalMethod(String method) {
-        return method.toUpperCase();
-    }
-
-    public static String buildCanonicalPath(String path) {
+    private static String buildCanonicalPath(String path) {
         try {
             return URLEncoder.encode(path, "UTF-8");
         } catch (UnsupportedEncodingException e) {
@@ -51,70 +46,43 @@ public class CanonicalMessage {
         }
     }
 
-    public static String buildCanonicalHeaders(Map<String, String> headers) {
+    private static String buildCanonicalHeaders(Map<String, String> headers) {
 
-        Map<String, String> upperCaseHeaders = uppercaseMap(headers);
+        Map<String, String> upperCaseHeaders = headers
+                .entrySet()
+                .stream()
+                .collect(Collectors.toMap(entry -> entry.getKey().toUpperCase(), Map.Entry::getValue));
 
-        List<String> signedHeadersList = getListOfHeadersToBeSigned(upperCaseHeaders);
+        String[] signedHeaders = Arrays.asList(upperCaseHeaders.get("X-BAR-SIGNATURE-METADATA").split(";"))
+                .stream()
+                .filter(s -> s.startsWith("signed-headers"))
+                .map(s -> s.substring(s.indexOf("\"") + 1, s.lastIndexOf("\"")))
+                .findFirst().orElse("")
+                .split(",");
 
-        List<String> canonicalHeaders = extractHeaders(upperCaseHeaders, signedHeadersList);
-
-        return canonicalHeaders.stream().sorted().collect(Collectors.joining("\n"));
+        return Arrays.asList(signedHeaders)
+                .stream()
+                .map(s -> urlEncode(s) + "=" + urlEncode(upperCaseHeaders.get(s)))
+                .sorted()
+                .collect(Collectors.joining("\n"));
     }
 
-    private static Map<String, String> uppercaseMap(Map<String, String> headers) {
-        Map<String, String> newMap = new HashMap<>();
-
-         headers.entrySet().stream().forEach(entry ->
-                 newMap.put(entry.getKey().toUpperCase(),
-                            entry.getValue()));
-        return newMap;
-    }
-
-    private static List<String> extractHeaders(Map<String, String> upperCaseHeaders, List<String> signedHeadersList) {
-        List<String> canonicalHeaders = new ArrayList<>();
-        for (String signedHeader : signedHeadersList) {
-            try {
-                canonicalHeaders.add(URLEncoder.encode(signedHeader, "UTF-8") + "=" +
-                        URLEncoder.encode(upperCaseHeaders.get(signedHeader), "UTF-8"));
-            } catch (UnsupportedEncodingException e) {
-                canonicalHeaders.add(signedHeader + "=" + upperCaseHeaders.get(signedHeader));
-            }
+    private static String urlEncode(String input) {
+        try {
+            return URLEncoder.encode(input, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            return input;
         }
-        return canonicalHeaders;
-    }
-
-    private static List<String> getListOfHeadersToBeSigned(Map<String, String> upperCaseHeaders) {
-        String metadata = upperCaseHeaders.get("X-BAR-SIGNATURE-METADATA");
-        String signedHeaders = "";
-
-        List<String> metaDataItems = Arrays.asList(metadata.split(";"));
-        for (String item : metaDataItems) {
-            if (item.startsWith("signed-headers")) {
-                signedHeaders = item.substring(item.indexOf("\"") + 1, item.lastIndexOf("\""));
-                signedHeaders = signedHeaders.toUpperCase();
-            }
-        }
-        return Arrays.asList(signedHeaders.replaceAll(" ", "").split(","));
     }
 
 
-    public static String buildCanonicalPayload(String body) {
-
-        List<String> payloadList = Arrays.asList(body.split("&"));
-
-        String canonicalPayload;
-        List<String> upperCasePayloadList = new ArrayList<>();
-        for(String payloadItem : payloadList){
-
-            canonicalPayload = payloadItem.split("=")[0].toUpperCase() + "=" +
-                    (payloadItem.split("=").length > 1 ? payloadItem.split("=")[1] : "" + "");
-            upperCasePayloadList.add(canonicalPayload);
-        }
-
-       return upperCasePayloadList.stream()
-               .sorted()
-               .collect(Collectors.joining("\n"));
+    private static String buildCanonicalBody(String body) {
+       return Arrays.asList(body.split("&"))
+                .stream()
+                .map(s -> {
+                    String[] entries = s.split("=");
+                    return entries.length > 1 ? entries[0].toUpperCase() + "=" + entries[1] : s;
+                })
+                .collect(Collectors.joining("\n"));
     }
 }
-

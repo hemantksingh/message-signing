@@ -16,10 +16,11 @@ public class VerifySignedMessage {
     @Test
     public void messageSignedWithValidSignatureIsVerified() throws KeyLoaderException, MessageSigningException {
         XBarSignature signature = signMessage();
+        System.out.print(signature.metadata);
 
         String requestMethod = "POST";
         String requestPath = "https://sandbox.inivaran.com";
-        String requestBody = "a=1&b=2";
+        String requestBody = "a=ab&b=cd";
         Map<String, String> requestHeaders = Collections.unmodifiableMap(new HashMap<String, String>() {
             {
                 put("CONTENT-TYPE", "application/x-www-form-urlencoded");
@@ -43,7 +44,7 @@ public class VerifySignedMessage {
         Integer requestId = 5;
         String requestMethod = "POST";
         String requestPath = "https://sandbox.inivaran.com";
-        String requestBody = "a=1&b=2";
+        String requestBody = "a=ab&b=cd";
         Map<String, String> requestHeaders = Collections.unmodifiableMap(new HashMap<String, String>() {
             {
                 put("CONTENT-TYPE", "application/x-www-form-urlencoded");
