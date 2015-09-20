@@ -1,7 +1,9 @@
 package com.inivaran.messagesigning;
 
-import java.util.Collections;
 import java.util.List;
+
+import static java.util.Collections.emptyList;
+import static java.util.Collections.unmodifiableList;
 
 public class VerificationResult {
     public final boolean verified;
@@ -13,13 +15,11 @@ public class VerificationResult {
     }
 
     public static VerificationResult failure(List<String> errors) {
-        return new VerificationResult(false,
-                Collections.unmodifiableList(errors == null
-                        ? Collections.emptyList() : errors));
+        return new VerificationResult(false, unmodifiableList(errors == null
+                        ? emptyList() : errors));
     }
 
     public static VerificationResult success(boolean verified) {
-        return new VerificationResult(verified,
-                Collections.unmodifiableList(Collections.emptyList()));
+        return new VerificationResult(verified, emptyList());
     }
 }
