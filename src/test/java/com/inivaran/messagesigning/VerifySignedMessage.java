@@ -13,6 +13,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
 import java.util.concurrent.Callable;
 
@@ -31,6 +33,9 @@ public class VerifySignedMessage {
                     "SHA256WITHRSA/PSS",
                     "UTF8")
             );
+    private final KeyLoader keyLoader = new KeyLoader("RSA",
+            bytes -> new PKCS8EncodedKeySpec(bytes),
+            bytes -> new X509EncodedKeySpec(bytes));
 
     @Test
     public void messageSignedWithValidSignatureIsVerified()
@@ -49,7 +54,7 @@ public class VerifySignedMessage {
         });
 
         String filename = getResourcePath("public_key.der").toString();
-        PublicKey publicKey = new RSAKeyLoader().loadPublicKey(filename);
+        PublicKey publicKey = keyLoader.loadPublicKey(filename);
 
         VerificationResult verificationResult = restMessageSigning.verifyRequest(
                 publicKey,
@@ -119,7 +124,7 @@ public class VerifySignedMessage {
                 requestId);
 
         String filename = getResourcePath("private_key.der").toString();
-        PrivateKey privateKey = new RSAKeyLoader().loadPrivateKey(filename);
+        PrivateKey privateKey = keyLoader.loadPrivateKey(filename);
 
         return restMessageSigning.signRequest(privateKey, detail);
     }
