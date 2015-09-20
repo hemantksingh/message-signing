@@ -1,0 +1,6 @@
+POST
+https%3A%2F%2Fsandbox.inivaran.com
+CONTENT-TYPE=application%2Fx-www-form-urlencoded
+X-BAR-SIGNATURE-METADATA=c14n-method%3D%22None%22%3Bclient-id%3D%22external-client%22%3Bdestination%3D%22https%3A%2F%2Fsandbox.inivaran.com%22%3Brequest-id%3D%225%22%3Brequest-timestamp%3D%22144077601900%22%3Bsignature-method%3D%22RSAwithSHA256%2FPSS%22%3Bsignature-version%3D%221%22%3Bsigned-headers%3D%22X-BAR-SIGNATURE-METADATA%2CCONTENT-TYPE%22
+A=ab
+B=cd
