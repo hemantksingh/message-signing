@@ -12,6 +12,8 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 import static java.util.Collections.unmodifiableMap;
 import static org.junit.Assert.assertEquals;
@@ -53,22 +55,33 @@ public class VerifySignedMessage {
         Map<String, String> requestHeaders = unmodifiableMap(new HashMap<String, String>() {
             {
                 put("CONTENT-TYPE", "application/x-www-form-urlencoded");
-                put("X-BAR-SIGNATURE-METADATA", CanonicalMessage.buildSignatureMetadata(
-                        "external-client",
-                        "https://sandbox.inivaran.com",
-                        5,
-                        144077601900L));
+
+                Map<String, String> signatureMetadata = new TreeMap<>();
+                signatureMetadata.put("signature-method", "RSAwithSHA256/PSS");
+                signatureMetadata.put("signature-version", "1");
+                signatureMetadata.put("signed-headers", "X-BAR-SIGNATURE-METADATA,CONTENT-TYPE");
+                signatureMetadata.put("c14n-method", "None");
+
+                signatureMetadata.put("client-id", "external-client");
+                signatureMetadata.put("destination", "https://sandbox.inivaran.com");
+                signatureMetadata.put("request-id", ((Integer) 5).toString());
+                signatureMetadata.put("request-timestamp", ((Long) 144077601900L).toString());
+
+                put("X-BAR-SIGNATURE-METADATA", signatureMetadata.entrySet()
+                        .stream()
+                        .map(entry -> String.format("%s=\"%s\"", entry.getKey(), entry.getValue()))
+                        .collect(Collectors.joining(";")));
             }
         });
 
-        String canonicalRequest = CanonicalMessage.buildCanonicalRequest(
+        CanonicalMessage message = new CanonicalMessage(
                 "POST",
                 "https://sandbox.inivaran.com",
                 "a=ab&b=cd",
                 requestHeaders);
 
         String expected = new String(Files.readAllBytes(getResourcePath("ExpectedCanonicalForm.txt")));
-        assertEquals(expected, canonicalRequest);
+        assertEquals(expected, message.toString());
     }
 
     private static Path getResourcePath(String resourceName) throws URISyntaxException {

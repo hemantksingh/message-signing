@@ -6,36 +6,30 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class CanonicalMessage {
-    public static String buildCanonicalRequest(String method,
-                                               String path,
-                                               String body,
-                                               Map<String, String> headers) {
+    private final String requestMethod;
+    private final String requestPath;
+    private final String requestBody;
+    private final Map<String, String> requestHeaders;
 
-        return String.join("\n",
-                method.toUpperCase(),
-                buildCanonicalPath(path),
-                buildCanonicalHeaders(headers),
-                buildCanonicalBody(body));
+    public CanonicalMessage(String requestMethod,
+                            String requestPath,
+                            String requestBody,
+                            Map<String, String> requestHeaders) {
+
+        this.requestMethod = requestMethod;
+        this.requestPath = requestPath;
+        this.requestBody = requestBody;
+        this.requestHeaders = requestHeaders;
     }
 
-    public static String buildSignatureMetadata(String clientId, String destination,
-                                                Integer requestId, Long requestTimestamp) {
+    @Override
+    public String toString() {
 
-        Map<String, String> signatureMetadata = new TreeMap<>();
-        signatureMetadata.put("signature-method", "RSAwithSHA256/PSS");
-        signatureMetadata.put("signature-version", "1");
-        signatureMetadata.put("signed-headers", "X-BAR-SIGNATURE-METADATA,CONTENT-TYPE");
-        signatureMetadata.put("c14n-method", "None");
-
-        signatureMetadata.put("client-id", clientId);
-        signatureMetadata.put("destination", destination);
-        signatureMetadata.put("request-id", requestId.toString());
-        signatureMetadata.put("request-timestamp", requestTimestamp.toString());
-
-        return signatureMetadata.entrySet()
-                .stream()
-                .map(entry -> String.format("%s=\"%s\"", entry.getKey(), entry.getValue()))
-                .collect(Collectors.joining(";"));
+        return String.join("\n",
+                requestMethod.toUpperCase(),
+                buildCanonicalPath(requestPath),
+                buildCanonicalHeaders(requestHeaders),
+                buildCanonicalBody(requestBody));
     }
 
     private static String buildCanonicalPath(String path) {
