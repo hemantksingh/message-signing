@@ -1,13 +1,20 @@
 package com.inivaran.messagesigning;
 
-import sun.misc.BASE64Decoder;
-import sun.misc.BASE64Encoder;
-
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
 
 public class RESTMessageSigning {
+
+    private final MessageSigning messageSigning;
+
+    public RESTMessageSigning(MessageSigning messageSigning) {
+        this.messageSigning = messageSigning;
+    }
 
     public XBarSignature signRequest(PrivateKey privateKey, SignRequestDetail detail)
             throws MessageSigningException {
@@ -35,14 +42,8 @@ public class RESTMessageSigning {
                 detail.requestBody,
                 headers);
 
-        MessageSigning rsaMessageSigning = new MessageSigning();
-        String signatureValue;
-        try {
-            byte[] sign = rsaMessageSigning.sign(canonicalMessage, privateKey);
-            signatureValue = new BASE64Encoder().encode(sign);
-        } catch (Exception e) {
-            throw new MessageSigningException("Problem signing request", e);
-        }
+        String signatureValue = uncheckCall(() ->
+                messageSigning.sign(canonicalMessage, privateKey));
 
         return signature.assignValue(signatureValue);
     }
@@ -50,8 +51,8 @@ public class RESTMessageSigning {
     public VerificationResult verifyRequest(PublicKey publicKey, VerifyRequestDetail detail)
             throws MessageSigningException {
 
-        VerifyRequestCommand command =  new VerifyRequestCommand(detail);
-        if(!command.isValid())
+        VerifyRequestCommand command = new VerifyRequestCommand(detail);
+        if (!command.isValid())
             return VerificationResult.failure(command.errors);
 
         CanonicalMessage canonicalMessage = new CanonicalMessage(
@@ -60,28 +61,27 @@ public class RESTMessageSigning {
                 detail.body,
                 detail.headers);
 
-        MessageSigning rsaMessageSigning = new MessageSigning();
-        try {
-        byte[] signature = new BASE64Decoder().decodeBuffer(getSignatureFromHeaders(detail.headers));
-            boolean verify = rsaMessageSigning.verify(canonicalMessage, signature, publicKey);
-            return VerificationResult.success(verify);
+        String signatureValue = getSignatureValue(detail.headers);
+        boolean verify = uncheckCall(() ->
+                messageSigning.verify(canonicalMessage, signatureValue, publicKey));
+        return VerificationResult.success(verify);
+    }
 
+    private static <T> T uncheckCall(Callable<T> callable) {
+        try {
+            return callable.call();
         } catch (Exception e) {
-            throw new MessageSigningException("Problem verifying signature on the request", e);
+            throw new RuntimeException(e);
         }
     }
 
-    private String getSignatureFromHeaders(Map<String, String> headers) {
-        Map<String, String> upperCaseHeaders = uppercaseMap(headers);
-        return upperCaseHeaders.get("X-BAR-SIGNATURE-VALUE");
-    }
-
-    private static Map<String, String> uppercaseMap(Map<String, String> headers) {
-        Map<String, String> newMap = new HashMap<>();
+    private String getSignatureValue(Map<String, String> headers) {
+        Map<String, String> upperCaseHeaders = new HashMap<>();
 
         headers.entrySet().stream().forEach(entry ->
-                newMap.put(entry.getKey().toUpperCase(),
+                upperCaseHeaders.put(entry.getKey().toUpperCase(),
                         entry.getValue()));
-        return newMap;
+
+        return upperCaseHeaders.get("X-BAR-SIGNATURE-VALUE");
     }
 }

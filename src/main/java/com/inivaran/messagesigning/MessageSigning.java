@@ -1,32 +1,46 @@
 package com.inivaran.messagesigning;
 
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.Security;
-import java.security.Signature;
+import java.security.*;
+import java.util.function.Function;
 
 public class MessageSigning {
 
-    private final String ALGORITHM_NAME = "SHA256WITHRSA/PSS";
-    private final String ENCODING = "UTF8";
+    private final Function<byte[], String> encoder;
+    private final Function<String, byte[]> decoder;
+    private final Provider provider;
+    private final String encoding;
+    private final String algorithmName;
 
-    public byte[] sign(CanonicalMessage message, PrivateKey privateKey) throws Exception {
-        Security.addProvider(new BouncyCastleProvider());
-        byte[] data = message.toString().getBytes(ENCODING);
-        Signature signature = Signature.getInstance(ALGORITHM_NAME);
-        signature.initSign(privateKey);
-        signature.update(data);
-        return signature.sign();
+    public MessageSigning(Function<byte[], String> encoder,
+                          Function<String, byte[]> decoder,
+                          Provider provider,
+                          String algorithmName, String encoding) {
+
+        this.encoder = encoder;
+        this.decoder = decoder;
+        this.provider = provider;
+        this.encoding = encoding;
+        this.algorithmName = algorithmName;
     }
 
-    public boolean verify(CanonicalMessage message, byte[] signature, PublicKey publicKey) throws Exception {
-        Security.addProvider(new BouncyCastleProvider());
-        Signature rsaSignature = Signature.getInstance(ALGORITHM_NAME);
+    public String sign(CanonicalMessage message,
+                       PrivateKey privateKey) throws Exception {
+        Security.addProvider(provider);
+        byte[] data = message.toString().getBytes(encoding);
+        Signature signature = Signature.getInstance(algorithmName);
+        signature.initSign(privateKey);
+        signature.update(data);
+        return encoder.apply(signature.sign());
+    }
+
+    public boolean verify(CanonicalMessage message,
+                          String signature,
+                          PublicKey publicKey) throws Exception {
+        Security.addProvider(provider);
+        Signature rsaSignature = Signature.getInstance(algorithmName);
         rsaSignature.initVerify(publicKey);
-        byte[] data = message.toString().getBytes(ENCODING);
+        byte[] data = message.toString().getBytes(encoding);
         rsaSignature.update(data);
-        return rsaSignature.verify(signature);
+        return rsaSignature.verify(decoder.apply(signature));
     }
 }

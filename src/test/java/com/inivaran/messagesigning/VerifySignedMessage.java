@@ -1,6 +1,9 @@
 package com.inivaran.messagesigning;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.Test;
+import sun.misc.BASE64Decoder;
+import sun.misc.BASE64Encoder;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -11,6 +14,7 @@ import java.nio.file.Paths;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.*;
+import java.util.concurrent.Callable;
 
 import static java.util.Collections.unmodifiableMap;
 import static org.junit.Assert.assertEquals;
@@ -18,6 +22,15 @@ import static org.junit.Assert.assertTrue;
 
 
 public class VerifySignedMessage {
+
+    private final RESTMessageSigning restMessageSigning =
+            new RESTMessageSigning(new MessageSigning(
+                    bytes -> new BASE64Encoder().encode(bytes),
+                    s -> uncheckCall(() -> new BASE64Decoder().decodeBuffer(s)),
+                    new BouncyCastleProvider(),
+                    "SHA256WITHRSA/PSS",
+                    "UTF8")
+            );
 
     @Test
     public void messageSignedWithValidSignatureIsVerified()
@@ -38,7 +51,7 @@ public class VerifySignedMessage {
         String filename = getResourcePath("public_key.der").toString();
         PublicKey publicKey = new RSAKeyLoader().loadPublicKey(filename);
 
-        VerificationResult verificationResult = new RESTMessageSigning().verifyRequest(
+        VerificationResult verificationResult = restMessageSigning.verifyRequest(
                 publicKey,
                 new VerifyRequestDetail(requestMethod, requestPath, requestBody, requestHeaders));
 
@@ -108,6 +121,14 @@ public class VerifySignedMessage {
         String filename = getResourcePath("private_key.der").toString();
         PrivateKey privateKey = new RSAKeyLoader().loadPrivateKey(filename);
 
-        return new RESTMessageSigning().signRequest(privateKey, detail);
+        return restMessageSigning.signRequest(privateKey, detail);
+    }
+
+    private static <T> T uncheckCall(Callable<T> callable) {
+        try {
+            return callable.call();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }
