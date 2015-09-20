@@ -5,18 +5,30 @@ import sun.misc.BASE64Encoder;
 
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.stream.Collectors;
+import java.util.*;
 
 public class RESTMessageSigning {
 
     public XBarSignature signRequest(PrivateKey privateKey, SignRequestDetail detail)
             throws MessageSigningException {
 
+        List<String> signedHeaders = new ArrayList<>();
+        signedHeaders.add("X-BAR-SIGNATURE-METADATA");
+        signedHeaders.add("CONTENT-TYPE");
+
+        XBarSignature signature = new XBarSignature("RSAwithSHA256/PSS",
+                "1",
+                "None",
+                signedHeaders,
+                detail.clientId,
+                detail.requestPath,
+                detail.requestId,
+                detail.requestTimestamp,
+                ""
+        );
+
         Map<String, String> headers = new HashMap<>(detail.requestHeaders);
-        headers.put("X-BAR-SIGNATURE-METADATA", signatureMetadata(detail));
+        headers.put("X-BAR-SIGNATURE-METADATA", signature.Metadata);
 
         CanonicalMessage canonicalMessage = new CanonicalMessage(detail.requestMethod,
                 detail.requestPath,
@@ -32,7 +44,7 @@ public class RESTMessageSigning {
             throw new MessageSigningException("Problem signing request", e);
         }
 
-        return new XBarSignature(signatureValue, signatureMetadata(detail));
+        return signature.assignValue(signatureValue);
     }
 
     public VerificationResult verifyRequest(PublicKey publicKey, VerifyRequestDetail detail)
@@ -71,23 +83,5 @@ public class RESTMessageSigning {
                 newMap.put(entry.getKey().toUpperCase(),
                         entry.getValue()));
         return newMap;
-    }
-
-    private static String signatureMetadata(SignRequestDetail detail) {
-        Map<String, String> signatureMetadata = new TreeMap<>();
-        signatureMetadata.put("signature-method", "RSAwithSHA256/PSS");
-        signatureMetadata.put("signature-version", "1");
-        signatureMetadata.put("signed-headers", "X-BAR-SIGNATURE-METADATA,CONTENT-TYPE");
-        signatureMetadata.put("c14n-method", "None");
-
-        signatureMetadata.put("client-id", detail.clientId);
-        signatureMetadata.put("destination", detail.requestPath);
-        signatureMetadata.put("request-id", detail.requestId.toString());
-        signatureMetadata.put("request-timestamp", detail.requestTimestamp.toString());
-
-        return signatureMetadata.entrySet()
-                .stream()
-                .map(entry -> String.format("%s=\"%s\"", entry.getKey(), entry.getValue()))
-                .collect(Collectors.joining(";"));
     }
 }
