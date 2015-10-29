@@ -9,3 +9,5 @@ Convert private Key to PKCS#8 format (so Java can read it)
 Output public key portion in DER format (so Java can read it)
 
 `$ openssl rsa -in private_key.pem -pubout -outform DER -out public_key.der`
+
+<img src="https://bitbucket.org/repo/7XoEpd/images/3887575059-DSC_1304.JPG" alt="Message Signing|Verification" align="left" width="400"/>
