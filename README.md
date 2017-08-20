@@ -1,3 +1,8 @@
+# Digital Signature
+
+Message siging uses RSA signature algorithm for signing `x-www-form-urlencoded` data to generate a digital signature. The data is canonicalised and signed by the sender and the receiver verifies it. 
+
+
 ## Generate a 2048-bit RSA private key ##
 
 `$ openssl genrsa -out private_key.pem 2048`
